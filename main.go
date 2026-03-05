@@ -14,6 +14,7 @@ var (
 	flagFetch    bool
 	flagURL      bool
 	flagGroup    bool
+	flagHidden   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -33,6 +34,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&flagFetch, "fetch", "f", false, "run git fetch before checking status (slower)")
 	rootCmd.Flags().BoolVarP(&flagURL, "url", "u", false, "show remote origin URL for each repository")
 	rootCmd.Flags().BoolVarP(&flagGroup, "group", "g", false, "group repositories by remote origin URL (implies --url)")
+	rootCmd.Flags().BoolVarP(&flagHidden, "hidden", "H", false, "include hidden directories (e.g. .worktrees)")
 }
 
 func run(cmd *cobra.Command, args []string) error {

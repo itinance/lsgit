@@ -44,7 +44,10 @@ func scan(root string, depth int) []RepoInfo {
 
 	var jobs []job
 	for i, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+		if !e.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(e.Name(), ".") && !flagHidden {
 			continue
 		}
 		jobs = append(jobs, job{i, e.Name(), filepath.Join(root, e.Name())})
