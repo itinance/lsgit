@@ -25,7 +25,12 @@ type RepoInfo struct {
 
 // scan returns RepoInfo entries for all git repos found under root.
 // Depth is the current recursion depth; flagDepth is the cap (0 = unlimited).
+// relBase is the path prefix accumulated so far relative to the original scan root.
 func scan(root string, depth int) []RepoInfo {
+	return scanRel(root, depth, "")
+}
+
+func scanRel(root string, depth int, relBase string) []RepoInfo {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil
@@ -37,9 +42,10 @@ func scan(root string, depth int) []RepoInfo {
 	}
 
 	type job struct {
-		idx  int
-		name string
-		path string
+		idx     int
+		name    string
+		relName string // path relative to the original scan root
+		path    string
 	}
 
 	var jobs []job
@@ -50,7 +56,11 @@ func scan(root string, depth int) []RepoInfo {
 		if strings.HasPrefix(e.Name(), ".") && !flagHidden {
 			continue
 		}
-		jobs = append(jobs, job{i, e.Name(), filepath.Join(root, e.Name())})
+		rel := e.Name()
+		if relBase != "" {
+			rel = relBase + "/" + e.Name()
+		}
+		jobs = append(jobs, job{i, e.Name(), rel, filepath.Join(root, e.Name())})
 	}
 
 	resultsCh := make(chan result, len(jobs))
@@ -60,22 +70,31 @@ func scan(root string, depth int) []RepoInfo {
 		wg.Add(1)
 		go func(j job) {
 			defer wg.Done()
+			var infos []RepoInfo
 			if isGitRepo(j.path) {
 				if flagFetch {
 					_ = gitFetch(j.path)
 				}
 				info := gitInfo(j.path)
-				info.Name = j.name
-				resultsCh <- result{j.idx, []RepoInfo{info}}
+				info.Name = j.relName
+				infos = append(infos, info)
+				// When -H is active, also recurse into the repo to find nested
+				// hidden dirs (e.g. .worktrees) that may contain more repos.
+				if flagHidden && (flagDepth == 0 || depth < flagDepth) {
+					infos = append(infos, scanRel(j.path, depth+1, j.relName)...)
+				}
 			} else if flagDepth == 0 || depth < flagDepth {
-				sub := scan(j.path, depth+1)
+				sub := scanRel(j.path, depth+1, j.relName)
 				if len(sub) > 0 {
-					resultsCh <- result{j.idx, sub}
+					infos = sub
 				} else if flagAll {
-					resultsCh <- result{j.idx, []RepoInfo{{Path: j.path, Name: j.name, IsRepo: false}}}
+					infos = []RepoInfo{{Path: j.path, Name: j.relName, IsRepo: false}}
 				}
 			} else if flagAll {
-				resultsCh <- result{j.idx, []RepoInfo{{Path: j.path, Name: j.name, IsRepo: false}}}
+				infos = []RepoInfo{{Path: j.path, Name: j.relName, IsRepo: false}}
+			}
+			if len(infos) > 0 {
+				resultsCh <- result{j.idx, infos}
 			}
 		}(j)
 	}
