@@ -13,6 +13,7 @@ var (
 	flagNoColor  bool
 	flagFetch    bool
 	flagURL      bool
+	flagGroup    bool
 )
 
 var rootCmd = &cobra.Command{
@@ -31,6 +32,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&flagNoColor, "no-color", false, "disable color output")
 	rootCmd.Flags().BoolVarP(&flagFetch, "fetch", "f", false, "run git fetch before checking status (slower)")
 	rootCmd.Flags().BoolVarP(&flagURL, "url", "u", false, "show remote origin URL for each repository")
+	rootCmd.Flags().BoolVarP(&flagGroup, "group", "g", false, "group repositories by remote origin URL (implies --url)")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -46,6 +48,10 @@ func run(cmd *cobra.Command, args []string) error {
 
 	if stat, err := os.Stat(abs); err != nil || !stat.IsDir() {
 		return fmt.Errorf("%q is not a directory", abs)
+	}
+
+	if flagGroup {
+		flagURL = true // grouping requires URL data
 	}
 
 	results := scan(abs, 0)
