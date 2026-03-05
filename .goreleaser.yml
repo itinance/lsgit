@@ -1,0 +1,90 @@
+version: 2
+
+project_name: lsgit
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: lsgit
+    main: .
+    binary: lsgit
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: lsgit
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+# .deb and .rpm via nfpm
+nfpms:
+  - id: lsgit
+    package_name: lsgit
+    vendor: itinance
+    homepage: https://github.com/itinance/lsgit
+    maintainer: itinance
+    description: ls for git repositories — list subdirs with branch and status
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/local/bin
+
+# Homebrew tap
+brews:
+  - name: lsgit
+    repository:
+      owner: itinance
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    directory: Formula
+    homepage: https://github.com/itinance/lsgit
+    description: ls for git repositories — list subdirs with branch and status
+    license: MIT
+    test: |
+      system "#{bin}/lsgit --version"
+    install: |
+      bin.install "lsgit"
+
+release:
+  github:
+    owner: itinance
+    name: lsgit
+  draft: false
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
