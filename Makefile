@@ -1,4 +1,4 @@
-.PHONY: build install clean release snapshot test
+.PHONY: build install clean release snapshot test tag
 
 BINARY   := lsgit
 VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -27,3 +27,11 @@ snapshot:
 # Full release — requires GITHUB_TOKEN and HOMEBREW_TAP_TOKEN env vars
 release:
 	goreleaser release --clean
+
+# Tag a new version and push commits + tag together to reliably trigger CI
+# Usage: make tag VERSION=v0.3.0
+tag:
+	@test -n "$(VERSION)" || (echo "Usage: make tag VERSION=v0.x.y" && exit 1)
+	git push origin main
+	git tag $(VERSION)
+	git push origin main $(VERSION)
