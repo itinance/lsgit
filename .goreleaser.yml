@@ -78,6 +78,7 @@ release:
     name: lsgit
   draft: false
   prerelease: auto
+  replace_existing_artifacts: true
 
 changelog:
   sort: asc
