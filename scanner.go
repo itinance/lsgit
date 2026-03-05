@@ -11,15 +11,16 @@ import (
 
 // RepoInfo holds the git metadata for one directory.
 type RepoInfo struct {
-	Path    string
-	Name    string
-	Branch  string
-	Changes int // number of changed/untracked/staged lines from git status --porcelain
-	IsClean bool
-	IsRepo  bool
-	Ahead   int // commits ahead of upstream
-	Behind  int // commits behind upstream
-	Error   string
+	Path      string
+	Name      string
+	Branch    string
+	Changes   int // number of changed/untracked/staged lines from git status --porcelain
+	IsClean   bool
+	IsRepo    bool
+	Ahead     int // commits ahead of upstream
+	Behind    int // commits behind upstream
+	RemoteURL string
+	Error     string
 }
 
 // scan returns RepoInfo entries for all git repos found under root.
@@ -142,6 +143,14 @@ func gitInfo(path string) RepoInfo {
 		if len(parts) == 2 {
 			fmt.Sscanf(parts[0], "%d", &info.Behind)
 			fmt.Sscanf(parts[1], "%d", &info.Ahead)
+		}
+	}
+
+	// Remote URL (only when requested, to avoid the extra subprocess otherwise)
+	if flagURL {
+		out, err = exec.Command("git", "-C", path, "remote", "get-url", "origin").Output()
+		if err == nil {
+			info.RemoteURL = strings.TrimSpace(string(out))
 		}
 	}
 

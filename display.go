@@ -82,6 +82,9 @@ func display(root string, repos []RepoInfo) {
 		}
 
 		fmt.Printf("  %s  %s  %s%s\n", name, branch, statusStr, syncStr)
+		if flagURL && r.RemoteURL != "" {
+			fmt.Printf("  %s  %s\n", strings.Repeat(" ", maxName), dim.Sprint(r.RemoteURL))
+		}
 	}
 
 	// Summary line

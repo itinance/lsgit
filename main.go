@@ -12,6 +12,7 @@ var (
 	flagDepth    int
 	flagNoColor  bool
 	flagFetch    bool
+	flagURL      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -29,6 +30,7 @@ func init() {
 	rootCmd.Flags().IntVarP(&flagDepth, "depth", "d", 1, "max depth to scan for nested repos (0 = unlimited)")
 	rootCmd.Flags().BoolVar(&flagNoColor, "no-color", false, "disable color output")
 	rootCmd.Flags().BoolVarP(&flagFetch, "fetch", "f", false, "run git fetch before checking status (slower)")
+	rootCmd.Flags().BoolVarP(&flagURL, "url", "u", false, "show remote origin URL for each repository")
 }
 
 func run(cmd *cobra.Command, args []string) error {
