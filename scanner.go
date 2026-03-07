@@ -51,7 +51,10 @@ func scanRel(root string, depth int, relBase string) []RepoInfo {
 	var jobs []job
 	for i, e := range entries {
 		if !e.IsDir() {
-			continue
+			// Follow symlinks: stat the target to see if it's a directory.
+			if st, err := os.Stat(filepath.Join(root, e.Name())); err != nil || !st.IsDir() {
+				continue
+			}
 		}
 		if strings.HasPrefix(e.Name(), ".") && !flagHidden {
 			continue
