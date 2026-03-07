@@ -121,8 +121,8 @@ func scanRel(root string, depth int, relBase string) []RepoInfo {
 	}
 
 	var out []RepoInfo
-	for i := range jobs {
-		out = append(out, ordered[i]...)
+	for _, j := range jobs {
+		out = append(out, ordered[j.idx]...)
 	}
 	return out
 }
