@@ -78,11 +78,20 @@ func scanRel(root string, depth int, relBase string) []RepoInfo {
 				info := gitInfo(j.path)
 				info.Name = j.relName
 				infos = append(infos, info)
-				// When -H is active, also recurse into the repo to find nested
-				// hidden dirs (e.g. .worktrees) that may contain more repos.
-				if flagHidden && (flagDepth == 0 || depth < flagDepth) {
+				// Always recurse into the repo to find nested repos (e.g. worktrees).
+				// Hidden subdirs are only included when -H is active.
+				if flagDepth == 0 || depth < flagDepth {
 					infos = append(infos, scanRel(j.path, depth+1, j.relName)...)
 				}
+			} else if worktreePath, ok := resolveWorktreeMetadata(j.path); ok {
+				// This is a git worktree metadata dir (inside .git/worktrees/).
+				// Report the actual worktree checkout instead.
+				if flagFetch {
+					_ = gitFetch(worktreePath)
+				}
+				info := gitInfo(worktreePath)
+				info.Name = j.relName
+				infos = append(infos, info)
 			} else if flagDepth == 0 || depth < flagDepth {
 				sub := scanRel(j.path, depth+1, j.relName)
 				if len(sub) > 0 {
@@ -118,6 +127,32 @@ func scanRel(root string, depth int, relBase string) []RepoInfo {
 func isGitRepo(path string) bool {
 	_, err := os.Stat(filepath.Join(path, ".git"))
 	return err == nil
+}
+
+// resolveWorktreeMetadata checks if path is a git worktree metadata directory
+// (as stored inside .git/worktrees/<name>/). If so, it resolves and returns
+// the actual worktree checkout path by reading the "gitdir" file.
+func resolveWorktreeMetadata(path string) (string, bool) {
+	if _, err := os.Stat(filepath.Join(path, "gitdir")); err != nil {
+		return "", false
+	}
+	if _, err := os.Stat(filepath.Join(path, "HEAD")); err != nil {
+		return "", false
+	}
+	data, err := os.ReadFile(filepath.Join(path, "gitdir"))
+	if err != nil {
+		return "", false
+	}
+	// gitdir contains a path to <worktree>/.git; the worktree is its parent.
+	gitdirPath := strings.TrimSpace(string(data))
+	if !filepath.IsAbs(gitdirPath) {
+		gitdirPath = filepath.Join(path, gitdirPath)
+	}
+	worktreePath := filepath.Dir(filepath.Clean(gitdirPath))
+	if stat, err := os.Stat(worktreePath); err != nil || !stat.IsDir() {
+		return "", false
+	}
+	return worktreePath, true
 }
 
 func gitFetch(path string) error {
